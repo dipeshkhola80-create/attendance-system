@@ -1,0 +1,96 @@
+<script>
+
+const semesterStart = new Date("2026-01-08");
+
+// Exam Period
+const examStart = new Date("2026-04-20");
+const examEnd = new Date("2026-05-05");
+
+// Holidays
+const holidays = [
+    new Date("2026-01-26")
+];
+
+// 📌 Timetable Mapping
+const timetable = {
+    1: { MOS: 2, CO: 2 },                 // Monday
+    2: { Graphics: 1 },                   // Tuesday
+    3: { Stats: 1, Maths: 2, MOS: 1 },    // Wednesday
+    4: { Stats: 2, Maths: 1, VAC: 2 },    // Thursday
+    5: { CO: 1, Stats: 1 }                // Friday
+};
+
+function checkTutorial() {
+    let subject = document.getElementById("subject").value;
+    document.getElementById("tutorialOption").style.display =
+        (subject === "Maths" || subject === "Stats") ? "block" : "none";
+}
+
+function calculate() {
+
+    let subject = document.getElementById("subject").value;
+    let leaves = parseInt(document.getElementById("leaves").value);
+    let tutorial = document.getElementById("tutorial").value;
+
+    if (!subject || isNaN(leaves) || leaves < 0) {
+        document.getElementById("result").innerHTML = "⚠ Enter valid details!";
+        return;
+    }
+
+    let today = new Date();
+    let totalClasses = 0;
+
+    for (let d = new Date(semesterStart); d <= today; d.setDate(d.getDate() + 1)) {
+
+        let day = d.getDay(); // 0=Sun, 1=Mon ...
+
+        let isExam = (d >= examStart && d <= examEnd);
+        let isHoliday = holidays.some(h =>
+            h.toDateString() === d.toDateString()
+        );
+
+        if (day === 0 || day === 6 || isExam || isHoliday) continue;
+
+        if (timetable[day] && timetable[day][subject]) {
+            totalClasses += timetable[day][subject];
+        }
+
+        // Add tutorial once per week if selected
+        if ((subject === "Maths" || subject === "Stats") && tutorial === "yes") {
+            if (day === 3) { // Assume tutorial on Wednesday
+                totalClasses += 1;
+            }
+        }
+    }
+
+    let attended = totalClasses - leaves;
+    if (attended < 0) attended = 0;
+
+    let percentage = totalClasses > 0
+        ? ((attended / totalClasses) * 100).toFixed(2)
+        : 0;
+
+    let maxLeavesAllowed = Math.floor(totalClasses * 0.25);
+    let moreBunk = maxLeavesAllowed - leaves;
+
+    localStorage.setItem(subject, JSON.stringify({
+        leaves: leaves,
+        percentage: percentage
+    }));
+
+    let message = `
+        📚 Total Classes: ${totalClasses} <br>
+        📈 Attendance: ${percentage}% <br><br>
+    `;
+
+    if (percentage >= 75) {
+        message += `✅ Safe Attendance <br>
+        You can bunk <b>${moreBunk}</b> more classes safely.`;
+    } else {
+        message += `⚠ Attendance Shortage!`;
+    }
+
+    document.getElementById("result").innerHTML = message;
+}
+
+</script>
